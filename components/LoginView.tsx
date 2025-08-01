@@ -78,9 +78,8 @@ const LoginView: React.FC = () => {
           </div>
         </form>
          <div className="text-center text-sm text-slate-500 pt-4 border-t border-slate-200">
-            <p className="font-semibold">Usuários de teste:</p>
-            <p>Admin: <span className="font-mono">admin</span> / <span className="font-mono">admin</span></p>
-            <p>Visualizador: <span className="font-mono">gold</span> / <span className="font-mono">gold</span></p>
+            <p>Usuário de teste (Visualizador): <span className="font-mono">gold</span> / <span className="font-mono">gold</span></p>
+            <p className="mt-6 text-xs text-slate-400">Software criado por: Adam Saldanha</p>
         </div>
       </div>
     </div>

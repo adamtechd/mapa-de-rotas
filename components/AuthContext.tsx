@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           sessionStorage.setItem('authUser', JSON.stringify(foundUser));
           resolve();
         } else {
-          reject(new Error('Credenciais inválidas. Tente "admin/admin" ou "gold/gold".'));
+          reject(new Error('Credenciais inválidas. Tente "gold/gold".'));
         }
       }, 500);
     });
