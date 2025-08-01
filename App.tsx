@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { PlansData, RoutePlanRow, RouteData, Technician, Vehicle } from './types';
 import { TECHNICIANS, VEHICLES, INITIAL_PLANS } from './constants';
@@ -23,12 +17,16 @@ import MonthlyCalendarView from './components/MonthlyCalendarView';
 import AnnualView from './components/AnnualView';
 import RouteEditModal from './components/AppointmentModal';
 import SettingsModal from './components/SettingsModal';
+import LoginView from './components/LoginView';
+import { useAuth } from './components/AuthContext';
 import { PlusIcon } from './components/icons/PlusIcon';
 import { PdfIcon } from './components/icons/PdfIcon';
 import { ExcelIcon } from './components/icons/ExcelIcon';
 import { SettingsIcon } from './components/icons/SettingsIcon';
 import { SaveIcon } from './components/icons/SaveIcon';
 import { DownloadIcon } from './components/icons/DownloadIcon';
+import { LogoutIcon } from './components/icons/LogoutIcon';
+
 
 declare const moment: any;
 
@@ -49,6 +47,7 @@ interface MonthlyViewSettings {
 }
 
 const App: React.FC = () => {
+  const { user, logout } = useAuth();
   const [plans, setPlans] = useState<PlansData>({});
   const [activeMapKey, setActiveMapKey] = useState<string>('MG');
 
@@ -170,7 +169,7 @@ const App: React.FC = () => {
   }
   
   const handleSaveAllData = () => {
-    if (saveStatus !== 'idle') return;
+    if (saveStatus !== 'idle' || user?.role !== 'admin') return;
     setSaveStatus('saving');
     try {
       savePlans(plans);
@@ -189,6 +188,7 @@ const App: React.FC = () => {
   };
 
   const handleEditRoute = (route: RouteData) => {
+    if (user?.role !== 'admin') return;
     setEditingRoute(route);
     setIsRouteModalOpen(true);
   };
@@ -199,17 +199,20 @@ const App: React.FC = () => {
   };
 
   const handleSaveRoute = (routeData: RouteData) => {
+    if (user?.role !== 'admin') return;
     const updatedPlan = activePlan.map(row => row.id === routeData.id ? routeData : row);
     handleSaveActivePlan(updatedPlan);
     handleCloseModal();
   };
 
   const handleClearRouteInModal = (routeId: string) => {
+    if (user?.role !== 'admin') return;
     handleClearRouteData(routeId);
     handleCloseModal();
   };
 
   const handleAddNewRouteInGroup = (groupId: string) => {
+    if (user?.role !== 'admin') return;
     const newRoute: RouteData = {
       type: 'route',
       id: `r${new Date().getTime()}`,
@@ -239,6 +242,7 @@ const App: React.FC = () => {
   };
 
   const handleAddGroup = () => {
+    if (user?.role !== 'admin') return;
     const newGroup = {
       type: 'group' as const,
       id: `g${new Date().getTime()}`,
@@ -249,11 +253,13 @@ const App: React.FC = () => {
   };
 
   const handleDeleteRow = (rowId: string) => {
+    if (user?.role !== 'admin') return;
     const updatedPlan = activePlan.filter(row => row.id !== rowId);
     handleSaveActivePlan(updatedPlan);
   }
 
   const handleClearRouteData = (routeId: string) => {
+    if (user?.role !== 'admin') return;
     const weekKey = currentDate.format('YYYY-WW');
     const updatedPlan = activePlan.map(row => {
       if (row.id === routeId && row.type === 'route') {
@@ -280,6 +286,7 @@ const App: React.FC = () => {
   };
 
   const handleClearDayAssignment = (routeId: string, dateKey: string) => {
+    if (user?.role !== 'admin') return;
     const updatedPlan = activePlan.map(row => {
       if (row.id === routeId && row.type === 'route') {
         const newAssignments = { ...row.assignments };
@@ -381,12 +388,16 @@ const App: React.FC = () => {
     if (viewMode === 'weekly') {
       return (
         <>
-          <button onClick={handleAddGroup} className="flex items-center gap-2 bg-slate-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-slate-700 transition-colors shadow">
-            <PlusIcon /> <span className="hidden sm:inline">Grupo</span>
-          </button>
-          <button onClick={() => handleAddNewRouteInGroup('__none__')} className="flex items-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-700 transition-colors shadow">
-            <PlusIcon /> <span className="hidden sm:inline">Rota</span>
-          </button>
+          {user?.role === 'admin' && (
+            <>
+              <button onClick={handleAddGroup} className="flex items-center gap-2 bg-slate-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-slate-700 transition-colors shadow">
+                <PlusIcon /> <span className="hidden sm:inline">Grupo</span>
+              </button>
+              <button onClick={() => handleAddNewRouteInGroup('__none__')} className="flex items-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-indigo-700 transition-colors shadow">
+                <PlusIcon /> <span className="hidden sm:inline">Rota</span>
+              </button>
+            </>
+          )}
           <button onClick={() => exportToPdf(displayedPlan, technicians, vehicles, currentDate, activeMapName)} className="p-2 bg-white rounded-lg hover:bg-slate-50 transition-colors shadow border border-slate-200" aria-label="Exportar para PDF">
             <PdfIcon />
           </button>
@@ -429,30 +440,44 @@ const App: React.FC = () => {
 
     return null;
   };
+  
+  if (!user) {
+    return <LoginView />;
+  }
 
   return (
     <div className="bg-slate-100 min-h-screen font-sans">
       <div className="max-w-full mx-auto p-4 sm:p-6 lg:p-8">
         <header className="mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-3xl font-bold text-slate-900">{activeMapName}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold text-slate-900">{activeMapName}</h1>
+              <span className="px-2 py-1 text-xs font-semibold text-indigo-800 bg-indigo-100 rounded-full">{user.role}</span>
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               {renderActionButtons()}
-              <button 
-                  onClick={handleSaveAllData}
-                  disabled={saveStatus !== 'idle'}
-                  className="flex items-center gap-2 bg-green-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-700 transition-all shadow disabled:bg-green-400 disabled:cursor-not-allowed"
-                >
-                  <SaveIcon />
-                  <span className="hidden sm:inline min-w-[5rem] text-center">
-                    {saveStatus === 'idle' && 'Salvar Tudo'}
-                    {saveStatus === 'saving' && 'Salvando...'}
-                    {saveStatus === 'saved' && 'Salvo!'}
-                  </span>
+              {user.role === 'admin' &&
+                <>
+                  <button 
+                    onClick={handleSaveAllData}
+                    disabled={saveStatus !== 'idle'}
+                    className="flex items-center gap-2 bg-green-600 text-white font-semibold py-2 px-3 rounded-lg hover:bg-green-700 transition-all shadow disabled:bg-green-400 disabled:cursor-not-allowed"
+                  >
+                    <SaveIcon />
+                    <span className="hidden sm:inline min-w-[5rem] text-center">
+                      {saveStatus === 'idle' && 'Salvar Tudo'}
+                      {saveStatus === 'saving' && 'Salvando...'}
+                      {saveStatus === 'saved' && 'Salvo!'}
+                    </span>
+                  </button>
+                  <button onClick={() => setIsSettingsModalOpen(true)} className="flex items-center gap-2 bg-white text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors shadow border border-slate-200">
+                    <SettingsIcon /> <span className="hidden sm:inline">Config.</span>
+                  </button>
+                </>
+              }
+               <button onClick={logout} className="flex items-center gap-2 bg-white text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors shadow border border-slate-200">
+                  <LogoutIcon /> <span className="hidden sm:inline">Sair</span>
                 </button>
-              <button onClick={() => setIsSettingsModalOpen(true)} className="flex items-center gap-2 bg-white text-slate-700 font-semibold py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors shadow border border-slate-200">
-                <SettingsIcon /> <span className="hidden sm:inline">Configurações</span>
-              </button>
             </div>
           </div>
 
@@ -520,33 +545,38 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {viewMode === 'weekly' && <RouteMapView plan={displayedPlan} technicians={technicians} vehicles={vehicles} currentDate={currentDate} onEditRoute={handleEditRoute} onDeleteRow={handleDeleteRow} onAddNewRouteInGroup={handleAddNewRouteInGroup} onClearDayAssignment={handleClearDayAssignment} />}
+          {viewMode === 'weekly' && <RouteMapView plan={displayedPlan} technicians={technicians} vehicles={vehicles} currentDate={currentDate} onEditRoute={handleEditRoute} onDeleteRow={handleDeleteRow} onAddNewRouteInGroup={handleAddNewRouteInGroup} onClearDayAssignment={handleClearDayAssignment} userRole={user.role} />}
           {viewMode === 'monthly' && <MonthlyCalendarView ref={monthlyCalendarRef} plan={activePlan} technicians={technicians} currentDate={currentDate} settings={monthlyViewSettings} mapName={activeMapName} />}
           {viewMode === 'yearly' && <AnnualView plan={activePlan} currentDate={currentDate} technicians={technicians} />}
         </main>
       </div>
+      
+      {user.role === 'admin' && (
+        <>
+            <RouteEditModal
+              isOpen={isRouteModalOpen}
+              onClose={handleCloseModal}
+              onSave={handleSaveRoute}
+              onClearRoute={handleClearRouteInModal}
+              routeData={editingRoute}
+              technicians={technicians}
+              vehicles={vehicles}
+              currentDate={currentDate}
+            />
 
-      <RouteEditModal
-        isOpen={isRouteModalOpen}
-        onClose={handleCloseModal}
-        onSave={handleSaveRoute}
-        onClearRoute={handleClearRouteInModal}
-        routeData={editingRoute}
-        technicians={technicians}
-        vehicles={vehicles}
-        currentDate={currentDate}
-      />
+            <SettingsModal
+              isOpen={isSettingsModalOpen}
+              onClose={() => setIsSettingsModalOpen(false)}
+              plan={activePlan}
+              onSavePlan={handleSaveActivePlan}
+              technicians={technicians}
+              onSaveTechnicians={handleSaveTechnicians}
+              vehicles={vehicles}
+              onSaveVehicles={handleSaveVehicles}
+            />
+        </>
+      )}
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        plan={activePlan}
-        onSavePlan={handleSaveActivePlan}
-        technicians={technicians}
-        onSaveTechnicians={handleSaveTechnicians}
-        vehicles={vehicles}
-        onSaveVehicles={handleSaveVehicles}
-      />
     </div>
   );
 };

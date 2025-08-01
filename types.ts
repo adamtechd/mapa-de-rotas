@@ -45,3 +45,9 @@ export type RoutePlanRow = GroupHeader | RouteData;
 export interface PlansData {
   [key: string]: RoutePlanRow[];
 }
+
+// Represents a logged-in user
+export interface User {
+  name: string;
+  role: 'admin' | 'viewer';
+}
