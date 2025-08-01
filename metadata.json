@@ -1,0 +1,6 @@
+{
+  "name": "Mapa de Rotas",
+  "description": "Uma aplicação para criar e gerenciar um mapa de rotas semanal para técnicos. Permite atribuir técnicos a rotas por dia, alocar veículos e exportar o plano para PDF e Excel.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
